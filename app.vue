@@ -3,8 +3,7 @@
     <select v-model="current_lesson">
       <option v-for="lesson, index of courses[curso].lessons" :key="index">{{ lesson.name }}</option>
     </select>
-    {{ current_lesson_data }}
-    <button class="btn" @click="addbar">Add</button>
+    <button class="btn btn-sm btn-primary"  @click="regenerate()">Regenerate</button>
     <p>Bars: {{ bars.length }}</p>
     <div id="output"></div>
   </div>
@@ -54,13 +53,17 @@ const courses = ref([
 
 watch(current_lesson_data, value => {
   if (!value) return
-  bars.value.splice(0, bars.value.length)
-  addbars(1)
+  regenerate()
 })
+
+function regenerate() {
+  bars.value.splice(0, bars.value.length)
+  addbars(current_lesson_data.value.notes.length*1.25)
+}
 
 const sharpNotes = ['C','C#', 'D','D#', 'E','E#', 'F','F#','G','G#','A','A#', 'B', 'B#']
 function transposeNote(note) {
-  console.assert(sharpNotes.length==14, 'must be 14 notes')
+  // console.assert(sharpNotes.length==14, 'must be 14 notes')
   return note.replace(/(\w[#b]?)(\d)/, function(match, note, octave) {
     octave = parseInt(octave)
     var idx = sharpNotes.findIndex(snote=>snote==note)
@@ -92,7 +95,6 @@ function addbar() {
   for (var i = 0; i < 4; i++)
     bar.notes.push(getRandomNote(randomNotes, priorityNotes))
   bars.value.push(bar)
-  console.log(bars.value)
   render()
 }
 
@@ -108,7 +110,7 @@ function render() {
   const { Factory, EasyScore, System } = Vex.Flow;
 
   const f = new Factory({
-    renderer: { elementId: 'output', width: 2500, height: 300 },
+    renderer: { elementId: 'output', width: 200+bars.value.length*220, height: 300 },
   });
 
   const score = f.EasyScore();
