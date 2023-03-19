@@ -1,7 +1,7 @@
 <template>
   <div>
     <select v-model="current_lesson">
-      <option v-for="level, index of courses[curso].lessons" :key="level.name">{{ level.name }}</option>
+      <option v-for="lesson, index of courses[curso].lessons" :key="index">{{ lesson.name }}</option>
     </select>
     {{ current_lesson_data }}
     <button class="btn" @click="addbar">Add</button>
@@ -16,6 +16,7 @@ import Vex from 'vexflow';
 const { Registry, StaveNote } = Vex;
 
 const concat = (a, b) => a.concat(b);
+const transpose = ref(0)
 const bars = ref([])
 const curso = ref(0)
 const current_lesson = ref("")
@@ -25,28 +26,28 @@ const courses = ref([
   {
     name: 'treble', clef: 'treble',
     lessons: [
-      { name: 'E, G', notes: 'E3, G3' },
-      { name: 'Añade F3', notes: 'E3, G3, F3' },
-      { name: 'Añade C4', notes: 'E3, G3, F3, C4', priority: 'C4' },
-      { name: 'Añade B3', notes: 'E3, G3, F3, B3, C4', priority: 'B3' },
-      { name: 'Añade A3', notes: 'E3, G3, F3, A3, B3, C4', priority: 'A3' },
-      { name: 'Añade D4', notes: 'E3, G3, F3, A3, B3, C4, D4', priority: 'D4' },
-      { name: 'Añade E4', notes: 'E3, G3, F3, A3, B3, C4, D4, E4', priority: 'E4' },
-      { name: 'Añade F4', notes: 'E3, G3, F3, A3, B3, C4, D4, E4, F4', priority: 'F4' },
-      { name: 'Examen', notes: 'E3, G3, F3, A3, B3, C4, D4, E4, F4' },
-      { name: 'Añade C3, D3', notes: 'C3, D3, E3, G3, F3, A3, B3, C4, D4, E4, F4', priority: 'C3, D3' },
-      { name: 'Añade B2', notes: 'B2, C3, D3, E3, G3, F3, A3, B3, C4, D4, E4, F4', priority: 'B2' },
-      { name: 'Añade A2', notes: 'A2, B2, C3, D3, E3, G3, F3, A3, B3, C4, D4, E4, F4', priority: 'A2' },
-      { name: 'Añade G2', notes: 'G2, A2, B2, C3, D3, E3, G3, F3, A3, B3, C4, D4, E4, F4', priority: 'G2' },
-      { name: 'Añade F2', notes: 'F2 ,G2, A2, B2, C3, D3, E3, G3, F3, A3, B3, C4, D4, E4, F4', priority: 'F2' },
-      { name: 'Lineas inferiores', notes: 'F2 ,G2, A2, B2, C3, D3, E3, G3, F3, A3, B3, C4, D4, E4, F4', priority: 'F2, G2, A2, B2, C3' },
-      { name: 'Añade G4, A4', notes: 'F2 ,G2, A2, B2, C3, D3, E3, G3, F3, A3, B3, C4, D4, E4, F4, G4, A4', priority: 'G4, A4' },
-      { name: 'Añade B4', notes: 'F2 ,G2, A2, B2, C3, D3, E3, G3, F3, A3, B3, C4, D4, E4, F4, G4, A4, B4', priority: 'B4' },
-      { name: 'Añade C5', notes: 'F2 ,G2, A2, B2, C3, D3, E3, G3, F3, A3, B3, C4, D4, E4, F4, G4, A4, B4, C5', priority: 'C5' },
-      { name: 'Añade D5', notes: 'F2 ,G2, A2, B2, C3, D3, E3, G3, F3, A3, B3, C4, D4, E4, F4, G4, A4, B4, C5, D5', priority: 'D5' },
-      { name: 'Añade E5', notes: 'F2 ,G2, A2, B2, C3, D3, E3, G3, F3, A3, B3, C4, D4, E4, F4, G4, A4, B4, C5, D5, E5', priority: 'E5' },
-      { name: 'Lineas superiores', notes: 'F2 ,G2, A2, B2, C3, D3, E3, G3, F3, A3, B3, C4, D4, E4, F4, G4, A4, B4, C5, D5, E5', priority: 'G4, A4, B4, C5, D5, E5' },
-      { name: 'Examen', notes: 'F2 ,G2, A2, B2, C3, D3, E3, G3, F3, A3, B3, C4, D4, E4, F4, G4, A4, B4, C5, D5, E5' },
+      { name: 'E, G', notes: 'E4, G4' },
+      { name: 'Añade F4', notes: 'E4, G4, F4' },
+      { name: 'Añade C5', notes: 'E4, G4, F4, C5', priority: 'C5' },
+      { name: 'Añade B4', notes: 'E4, G4, F4, B4, C5', priority: 'B4' },
+      { name: 'Añade A4', notes: 'E4, G4, F4, A4, B4, C5', priority: 'A4' },
+      { name: 'Añade D5', notes: 'E4, G4, F4, A4, B4, C5, D5', priority: 'D5' },
+      { name: 'Añade E5', notes: 'E4, G4, F4, A4, B4, C5, D5, E5', priority: 'E5' },
+      { name: 'Añade F5', notes: 'E4, G4, F4, A4, B4, C5, D5, E5, F5', priority: 'F5' },
+      { name: 'Examen', notes: 'E4, G4, F4, A4, B4, C5, D5, E5, F5' },
+      { name: 'Añade C4, D4', notes: 'C4, D4, E4, G4, F4, A4, B4, C5, D5, E5, F5', priority: 'C4, D4' },
+      { name: 'Añade B3', notes: 'B3, C4, D4, E4, G4, F4, A4, B4, C5, D5, E5, F5', priority: 'B3' },
+      { name: 'Añade A3', notes: 'A3, B3, C4, D4, E4, G4, F4, A4, B4, C5, D5, E5, F5', priority: 'A3' },
+      { name: 'Añade G3', notes: 'G3, A3, B3, C4, D4, E4, G4, F4, A4, B4, C5, D5, E5, F5', priority: 'G3' },
+      { name: 'Añade F3', notes: 'F3 ,G3, A3, B3, C4, D4, E4, G4, F4, A4, B4, C5, D5, E5, F5', priority: 'F3' },
+      { name: 'Lineas inferiores', notes: 'F3 ,G3, A3, B3, C4, D4, E4, G4, F4, A4, B4, C5, D5, E5, F5', priority: 'F3, G3, A3, B3, C4' },
+      { name: 'Añade G5, A5', notes: 'F3 ,G3, A3, B3, C4, D4, E4, G4, F4, A4, B4, C5, D5, E5, F5, G5, A5', priority: 'G5, A5' },
+      { name: 'Añade B5', notes: 'F3 ,G3, A3, B3, C4, D4, E4, G4, F4, A4, B4, C5, D5, E5, F5, G5, A5, B5', priority: 'B5' },
+      { name: 'Añade C6', notes: 'F3 ,G3, A3, B3, C4, D4, E4, G4, F4, A4, B4, C5, D5, E5, F5, G5, A5, B5, C6', priority: 'C6' },
+      { name: 'Añade D6', notes: 'F3 ,G3, A3, B3, C4, D4, E4, G4, F4, A4, B4, C5, D5, E5, F5, G5, A5, B5, C6, D6', priority: 'D6' },
+      { name: 'Añade E6', notes: 'F3 ,G3, A3, B3, C4, D4, E4, G4, F4, A4, B4, C5, D5, E5, F5, G5, A5, B5, C6, D6, E6', priority: 'E6' },
+      { name: 'Lineas superiores', notes: 'F3 ,G3, A3, B3, C4, D4, E4, G4, F4, A4, B4, C5, D5, E5, F5, G5, A5, B5, C6, D6, E6', priority: 'G5, A5, B5, C6, D6, E6' },
+      { name: 'Examen', notes: 'F3 ,G3, A3, B3, C4, D4, E4, G4, F4, A4, B4, C5, D5, E5, F5, G5, A5, B5, C6, D6, E6' },
     ]
   }])
 
@@ -54,8 +55,24 @@ const courses = ref([
 watch(current_lesson_data, value => {
   if (!value) return
   bars.value.splice(0, bars.value.length)
-  addbars(8)
+  addbars(1)
 })
+
+const sharpNotes = ['C','C#', 'D','D#', 'E','E#', 'F','F#','G','G#','A','A#', 'B', 'B#']
+function transposeNote(note) {
+  console.assert(sharpNotes.length==14, 'must be 14 notes')
+  return note.replace(/(\w[#b]?)(\d)/, function(match, note, octave) {
+    octave = parseInt(octave)
+    var idx = sharpNotes.findIndex(snote=>snote==note)
+    idx+=transpose.value
+    while(idx>14)
+    {
+      idx-=14
+      octave++
+    }
+    return sharpNotes[idx]+octave
+  })
+}
 
 var lastNote = null  // sirve para que no se repitan notas tan a menudo
 function getRandomNote(arr, priority) {
@@ -65,16 +82,17 @@ function getRandomNote(arr, priority) {
   } while ((lastNote == arr[idx] && Math.random() > .2) || // un 20% de posibilidades de repetir la nota anterior
     (priority.length && Math.random() < .5 && !priority.includes(arr[idx]))) // si hay notas de prioridad, el 50% deben ser de la lista de prioritarias
   lastNote = arr[idx]
-  return arr[idx]
+  return transposeNote(arr[idx])
 }
 
 function addbar() {
-  const randomNotes = current_lesson_data.value.notes.split(/\s*?,\s*?/g).map(x=>!!x)
-  const priorityNotes = current_lesson_data.value.priority ? current_lesson_data.value.priority.split(/\s*?,\s*?/g).map(x=>!!x) : []
+  const randomNotes = current_lesson_data.value.notes.split(/\s*,\s*/g).filter(x=>!!x)
+  const priorityNotes = current_lesson_data.value.priority ? current_lesson_data.value.priority.split(/\s*?,\s*?/g).filter(x=>!!x) : []
   const bar = { notes: [] }
   for (var i = 0; i < 4; i++)
     bar.notes.push(getRandomNote(randomNotes, priorityNotes))
   bars.value.push(bar)
+  console.log(bars.value)
   render()
 }
 
