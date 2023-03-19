@@ -4,7 +4,7 @@ export const useSettings = defineStore("settings", {
   state: () => {
     return {
       course: 0,
-      lessonName: ''
+      currentLesson: ''
     };
   },
   persist: true

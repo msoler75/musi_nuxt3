@@ -6,11 +6,17 @@
     <div class="mt-auto p-4 space-x-4 w-full justify-between">
       <div class="flex">
         <div class="flex space-x-4">
-          <select v-model="current_lesson" class="select select-bordered">
-            <option v-for="lesson, index of courses[settings.course].lessons" :key="index">{{ lesson.name }}</option>
-          </select>
           <button class="btn btn-primary" @click="regenerate()">
             <Icon name='codicon:debug-restart' />
+          </button>
+          <select v-model="settings.currentLesson" class="select select-bordered">
+            <option v-for="lesson, index of courses[settings.course].lessons" :key="index">{{ lesson.name }}</option>
+          </select>
+          <button class="btn btn-secondary" @click="retrocederNivel()">
+            <Icon name='mdi:arrow-left' />
+          </button>
+          <button class="btn btn-secondary" @click="avanzarNivel()">
+            <Icon name='mdi:arrow-right' />
           </button>
         </div>
         <div class="flex items-center ml-auto space-x-4">
@@ -91,9 +97,23 @@ const bars = ref([])
 const ready = ref(false)
 
 // lessons
-const current_lesson = ref("E, G")
 const current_course = computed(() => settings.course >= 0 && settings.course < courses.value.length ? courses.value[settings.course] : null)
-const current_lesson_data = computed(() => current_course.value ? current_course.value.lessons.find(les => les.name == current_lesson.value) : null)
+const current_lesson_data = computed(() => current_course.value ? current_course.value.lessons.find(les => les.name == settings.currentLesson) : null)
+
+
+function retrocederNivel() {
+  if (!current_lesson_data.value) return
+  const idx = current_course.value.lessons.findIndex(les => les.name == settings.currentLesson)
+  if (idx > 0)
+    settings.currentLesson = current_course.value.lessons[idx - 1].name
+}
+
+function avanzarNivel() {
+  if (!current_lesson_data.value) return
+  const idx = current_course.value.lessons.findIndex(les => les.name == settings.currentLesson)
+  if (idx + 1 < current_course.value.lessons.length)
+    settings.currentLesson = current_course.value.lessons[idx + 1].name
+}
 
 const courses = ref([
   {
@@ -282,10 +302,6 @@ body,
 html {
   margin: 0;
   padding: 0;
-}
-
-body {
-  min-height: 100vh;
 }
 
 .flex-expander {
