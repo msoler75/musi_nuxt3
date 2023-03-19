@@ -1,11 +1,35 @@
 <template>
-  <div>
-    <select v-model="current_lesson">
-      <option v-for="lesson, index of courses[curso].lessons" :key="index">{{ lesson.name }}</option>
-    </select>
-    <button class="btn btn-sm btn-primary"  @click="regenerate()">Regenerate</button>
-    <p>Bars: {{ bars.length }}</p>
-    <div id="output"></div>
+  <div class="flex-expander h-full content base-100 base-content">
+    <div class="overflow-x-auto mb-auto flex-grow" ref="scroller">
+      <div id="output"></div>
+    </div>
+    <div class="mt-auto p-4 space-x-4 w-full justify-between">
+      <div class="flex">
+        <div class="flex space-x-4">
+          <select v-model="current_lesson" class="select select-bordered">
+            <option v-for="lesson, index of courses[settings.course].lessons" :key="index">{{ lesson.name }}</option>
+          </select>
+          <button class="btn btn-primary" @click="regenerate()">
+            <Icon name='codicon:debug-restart' />
+          </button>
+        </div>
+        <div class="flex items-center ml-auto space-x-4">
+          <span>{{ speed }}</span>
+          <button class="btn btn-secondary" @click="position = 0; pause();">
+            <Icon name="mdi:rewind" />
+          </button>
+          <button class="btn btn-secondary" @click="speed -= 10">
+            <Icon name="mdi:speedometer-slow" />
+          </button>
+          <button class="btn btn-secondary" @click="speed += 10">
+            <Icon name="mdi:speedometer" />
+          </button>
+          <button class="btn btn-primary" @click="playpause()">
+            <Icon :name="playIcon" />
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -14,12 +38,62 @@
 import Vex from 'vexflow';
 const { Registry, StaveNote } = Vex;
 
+const settings = useSettings()
+
+// play
+
+var rAF = null // window.requestAnimationFrame || window.setTimeout(func, 1000/16)
+const scroller = ref(null)
+const playing = ref(false)
+const playIcon = computed(() => !playing.value ? 'material-symbols:play-arrow-rounded' : 'material-symbols:pause')
+const position = ref(0)
+const speed = ref(30)
+
+
+function restart() {
+  position.value = 0
+}
+
+function play() {
+  playing.value = true
+}
+
+function pause() {
+  playing.value = false
+}
+
+function playpause() {
+  if (playing.value) pause(); else play()
+}
+
+function nextFrame() {
+  rAF(() => {
+    if (playing.value) {
+      position.value += speed.value / (1000 / 16)
+    }
+    nextFrame()
+  })
+}
+
+watch(position, value => {
+  scroller.value.scrollLeft = value
+})
+
+
+
+
+// score
 const concat = (a, b) => a.concat(b);
 const transpose = ref(0)
 const bars = ref([])
-const curso = ref(0)
-const current_lesson = ref("")
-const current_lesson_data = computed(() => courses.value[0].lessons.find(les => les.name == current_lesson.value))
+
+// output
+const ready = ref(false)
+
+// lessons
+const current_lesson = ref("E, G")
+const current_course = computed(() => settings.course >= 0 && settings.course < courses.value.length ? courses.value[settings.course] : null)
+const current_lesson_data = computed(() => current_course.value ? current_course.value.lessons.find(les => les.name == current_lesson.value) : null)
 
 const courses = ref([
   {
@@ -53,27 +127,32 @@ const courses = ref([
 
 watch(current_lesson_data, value => {
   if (!value) return
+  position.value = 0
   regenerate()
 })
 
 function regenerate() {
+  if (!current_lesson_data.value) return
+  ready.value = false
+  playing.value = false
+  position.value = 0
   bars.value.splice(0, bars.value.length)
-  addbars(current_lesson_data.value.notes.length*1.25)
+  addbars(current_lesson_data.value.notes.length * 1.25)
+  render()
 }
 
-const sharpNotes = ['C','C#', 'D','D#', 'E','E#', 'F','F#','G','G#','A','A#', 'B', 'B#']
+const sharpNotes = ['C', 'C#', 'D', 'D#', 'E', 'E#', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B', 'B#']
 function transposeNote(note) {
   // console.assert(sharpNotes.length==14, 'must be 14 notes')
-  return note.replace(/(\w[#b]?)(\d)/, function(match, note, octave) {
+  return note.replace(/(\w[#b]?)(\d)/, function (match, note, octave) {
     octave = parseInt(octave)
-    var idx = sharpNotes.findIndex(snote=>snote==note)
-    idx+=transpose.value
-    while(idx>14)
-    {
-      idx-=14
+    var idx = sharpNotes.findIndex(snote => snote == note)
+    idx += transpose.value
+    while (idx > 14) {
+      idx -= 14
       octave++
     }
-    return sharpNotes[idx]+octave
+    return sharpNotes[idx] + octave
   })
 }
 
@@ -89,13 +168,13 @@ function getRandomNote(arr, priority) {
 }
 
 function addbar() {
-  const randomNotes = current_lesson_data.value.notes.split(/\s*,\s*/g).filter(x=>!!x)
-  const priorityNotes = current_lesson_data.value.priority ? current_lesson_data.value.priority.split(/\s*?,\s*?/g).filter(x=>!!x) : []
+  if (!current_lesson_data.value) return
+  const randomNotes = current_lesson_data.value.notes.split(/\s*,\s*/g).filter(x => !!x)
+  const priorityNotes = current_lesson_data.value.priority ? current_lesson_data.value.priority.split(/\s*?,\s*?/g).filter(x => !!x) : []
   const bar = { notes: [] }
   for (var i = 0; i < 4; i++)
     bar.notes.push(getRandomNote(randomNotes, priorityNotes))
   bars.value.push(bar)
-  render()
 }
 
 function addbars(num) {
@@ -110,7 +189,7 @@ function render() {
   const { Factory, EasyScore, System } = Vex.Flow;
 
   const f = new Factory({
-    renderer: { elementId: 'output', width: 200+bars.value.length*220, height: 300 },
+    renderer: { elementId: 'output', width: 200 + bars.value.length * 220, height: 200 },
   });
 
   const score = f.EasyScore();
@@ -155,65 +234,66 @@ function render() {
 
 
     /* system
-      .addStave({ voices: [voice(notes('(G3 B3 D4)/h, A3/q, A2/q', { clef: 'bass' }))] })
-      .addClef('bass')
-      .addKeySignature('C')
-      .addTimeSignature('4/4');
+    .addStave({ voices: [voice(notes('(G3 B3 D4)/h, A3/q, A2/q', { clef: 'bass' }))] })
+    .addClef('bass')
+    .addKeySignature('C')
+    .addTimeSignature('4/4');
     */
 
     if (i == 0) {
       r
-        .addClef('treble')
+        .addClef(current_course.value.clef)
         .addKeySignature('C')
         .addTimeSignature('4/4');
 
-      system.addConnector('brace');
       system.addConnector('singleLeft');
-
-    }
-    else {
 
     }
     system.addConnector('singleRight');
 
   }
 
-  /*
-    //  Measure 2 
-    
-    system = appendSystem(150);
-    system.addStave({ voices: [voice(notes('D5/q, G4, G4'))] });
-    system.addStave({ voices: [voice(notes('B3/h.', { clef: 'bass' }))] });
-    system.addConnector('singleRight');
-  
-  
-    //  Measure 3 
-    system = appendSystem(350);
-    system.addStave({
-      voices: [voice([notes('E5/q[id="m3a"]'), beam(notes('C5/8, D5, E5, F5', { stem: 'down' }))].reduce(concat))],
-    });
-  
-    system.addStave({ voices: [voice(notes('C4/h.', { clef: 'bass' }))] });
-    system.addConnector('singleRight');
-  
-    //  Measure 4 
-    system = appendSystem(150);
-    system.addStave({ voices: [voice(notes('G5/q[id="m4a"], G4[id="m4b"], G4[id="m4c"]'))] });
-  
-    system.addStave({ voices: [voice(notes('B3/h.', { clef: 'bass' }))] });
-    system.addConnector('singleRight');
-  */
-
-
   f.draw();
+
 }
 
 onMounted(() => {
 
-  render()
+  regenerate()
+
+  // start scrolling
+  rAF = window.requestAnimationFrame || window.setTimeout(func, 1000 / 16)
+
+  nextFrame()
 
 })
 
 </script>
 
 
+
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body,
+html {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-height: 100vh;
+}
+
+.flex-expander {
+  @apply flex-grow flex-shrink-0 flex flex-col;
+}
+
+.content {
+  @apply flex-grow;
+  min-height: 100vh;
+}
+</style>

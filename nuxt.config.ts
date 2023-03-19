@@ -3,7 +3,11 @@ export default defineNuxtConfig({
 
 
 modules: [
+  '@pinia/nuxt',
+  '@pinia-plugin-persistedstate/nuxt',
   '@nuxtjs/tailwindcss',
+  '@nuxtjs/color-mode',
+  'nuxt-icon',
 ],
 
     app: {

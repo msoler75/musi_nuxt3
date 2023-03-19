@@ -11,8 +11,12 @@
     "nuxt": "^3.3.1"
   },
   "dependencies": {
+    "@nuxtjs/color-mode": "^3.2.0",
     "@nuxtjs/tailwindcss": "^6.6.0",
+    "@pinia-plugin-persistedstate/nuxt": "^1.1.1",
+    "@pinia/nuxt": "^0.4.7",
     "daisyui": "^2.51.4",
+    "nuxt-icon": "^0.3.3",
     "vexflow": "^4.1.0",
     "vextab": "^3.0.6"
   }
