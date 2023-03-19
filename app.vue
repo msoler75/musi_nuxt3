@@ -1,27 +1,37 @@
 <template>
   <div class="flex-expander h-full content base-100 base-content">
     <div class="overflow-x-auto mb-auto flex-grow" ref="scroller">
-      <div id="output"></div>
+      <div id="output"
+      :style="{transform: `scale(${1+zoom/10})`}"></div>
     </div>
     <div class="mt-auto p-4 space-x-4 w-full justify-between">
       <div class="flex">
         <div class="flex space-x-4">
-          <button class="btn btn-primary" @click="regenerate()">
+          <button class="btn btn-primary hidden lg:inline" @click="regenerate()">
             <Icon name='codicon:debug-restart' />
           </button>
           <select v-model="settings.currentLesson" class="select select-bordered">
             <option v-for="lesson, index of courses[settings.course].lessons" :key="index">{{ lesson.name }}</option>
           </select>
-          <button class="btn btn-secondary" @click="retrocederNivel()">
+          <button class="hidden lg:inline btn btn-secondary" @click="retrocederNivel()">
             <Icon name='mdi:arrow-left' />
           </button>
-          <button class="btn btn-secondary" @click="avanzarNivel()">
+          <button class="hidden sm:inline btn btn-secondary" @click="avanzarNivel()">
             <Icon name='mdi:arrow-right' />
           </button>
         </div>
+
+        <div class="hidden md:flex items-center ml-auto space-x-4">
+          <button class="btn btn-secondary" @click="zoom++">
+            <Icon name="octicon:zoom-in-16" />
+          </button>
+          <button class="btn btn-secondary" @click="zoom--">
+            <Icon name="octicon:zoom-out-16" />
+          </button>
+          </div>
+
         <div class="flex items-center ml-auto space-x-4">
-          <span>{{ speed }}</span>
-          <button class="btn btn-secondary" @click="position = 0; pause();">
+          <button class="hidden lg:inline btn btn-secondary" @click="position = 0; pause();">
             <Icon name="mdi:rewind" />
           </button>
           <button class="btn btn-secondary" @click="speed -= 10">
@@ -53,6 +63,7 @@ const scroller = ref(null)
 const playing = ref(false)
 const playIcon = computed(() => !playing.value ? 'material-symbols:play-arrow-rounded' : 'material-symbols:pause')
 const position = ref(0)
+const zoom = ref(1)
 const speed = ref(30)
 
 
@@ -86,11 +97,55 @@ watch(position, value => {
 })
 
 
+// settings
+const transpose = ref(0) // global transpose
+const defaultLessonSettings = {
+  maxDistance: 12, // semitones
+  priorizeDistances: [2, 4, 7], // semitones
+  hasSharpedNotes: false // dont show sharp 
+}
+
+
+var lastNote = "C3"  // sirve para que no se repitan notas tan a menudo
+function getRandomNote(settings) {
+  const arr = settings.notes.split(/\s*,\s*/g).filter(x => !!x)
+  const priority = settings.priority ? settings.priority.split(/\s*?,\s*?/g).filter(x => !!x) : []
+  var idx
+  var distance = 2
+  var loops = 24
+  var bestNote
+  var bestScore = 0
+  var fail = false
+  do {
+    idx = Math.floor(Math.random() * arr.length)
+    var note = arr[idx]
+    distance = getDistance(lastNote, note)
+    const cond1 = distance<settings.maxDistance || Math.random() < .05 // el 95% de los intervalos deben estar dentro del rango máximo
+    const cond2 = settings.priorizeDistances.includes(distance) || Math.random()<.5 // el 50% de intervalos deberían de estar entre la lista
+    const cond3 = settings.hasSharpedNotes || note.indexOf('#')==-1 // en el 100% de los casos no puede haber notas sharp, si no está permitido
+    const cond4 = !priority.length || priority.includes(note) || Math.random()<.5 // si hay notas de prioridad, el 50% deben ser prioritarias
+    const cond5 = lastNote != note // no deben repetirse notas
+    const score1 = cond1?1:0 
+    const score2 = cond2?1:0 
+    const score3 = cond3?1:0 
+    const score4 = cond4?1:0 
+    const score5 = cond5?2:0 
+    const score = score1+score2+score3+score4+score5
+    fail = score<6
+    if(score>bestScore) {
+      bestNote = note
+      bestScore = score
+    }
+  } while (loops-->0 && fail)
+
+  lastNote = bestNote
+  console.log(note, "!")
+  return transposeNote(arr[idx])
+}
 
 
 // score
 const concat = (a, b) => a.concat(b);
-const transpose = ref(0)
 const bars = ref([])
 
 // output
@@ -98,7 +153,7 @@ const ready = ref(false)
 
 // lessons
 const current_course = computed(() => settings.course >= 0 && settings.course < courses.value.length ? courses.value[settings.course] : null)
-const current_lesson_data = computed(() => current_course.value ? current_course.value.lessons.find(les => les.name == settings.currentLesson) : null)
+const current_lesson_data = computed(() => current_course.value ? {...defaultLessonSettings, ...current_course.value.lessons.find(les => les.name == settings.currentLesson)} : null)
 
 
 function retrocederNivel() {
@@ -119,6 +174,7 @@ const courses = ref([
   {
     name: 'treble', clef: 'treble',
     lessons: [
+    { name: 'test', notes: 'G3, C4, G4, C5, G5, C6' },
       { name: 'E, G', notes: 'E4, G4' },
       { name: 'Añade F4', notes: 'E4, G4, F4' },
       { name: 'Añade C5', notes: 'E4, G4, F4, C5', priority: 'C5' },
@@ -161,39 +217,40 @@ function regenerate() {
   render()
 }
 
-const sharpNotes = ['C', 'C#', 'D', 'D#', 'E', 'E#', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B', 'B#']
+const semitones = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 function transposeNote(note) {
-  // console.assert(sharpNotes.length==14, 'must be 14 notes')
   return note.replace(/(\w[#b]?)(\d)/, function (match, note, octave) {
     octave = parseInt(octave)
-    var idx = sharpNotes.findIndex(snote => snote == note)
+    var idx = semitones.findIndex(snote => snote == note)
     idx += transpose.value
-    while (idx > 14) {
-      idx -= 14
+    while (idx > 12) {
+      idx -= 12
       octave++
     }
-    return sharpNotes[idx] + octave
+    return semitones[idx] + octave
   })
 }
 
-var lastNote = null  // sirve para que no se repitan notas tan a menudo
-function getRandomNote(arr, priority) {
-  var idx
-  do {
-    idx = Math.floor(Math.random() * arr.length)
-  } while ((lastNote == arr[idx] && Math.random() > .2) || // un 20% de posibilidades de repetir la nota anterior
-    (priority.length && Math.random() < .5 && !priority.includes(arr[idx]))) // si hay notas de prioridad, el 50% deben ser de la lista de prioritarias
-  lastNote = arr[idx]
-  return transposeNote(arr[idx])
-}
+// distance in semitones
+function getDistance(note1, note2) {
+  const o1 = parseInt(note1.match(/\d/))
+  const o2 = parseInt(note2.match(/\d/))
+  const n1 = note1.replace(/\d+/,'')
+  const n2 = note2.replace(/\d+/,'')
+  var idx1 = note1?semitones.findIndex(snote => snote == n1):0
+  var idx2 = semitones.findIndex(snote => snote == n2)
+  const dist = Math.abs(idx1+o1*12-(idx2+o2*12) )
+  return dist
+  }
+  
+
+
 
 function addbar() {
   if (!current_lesson_data.value) return
-  const randomNotes = current_lesson_data.value.notes.split(/\s*,\s*/g).filter(x => !!x)
-  const priorityNotes = current_lesson_data.value.priority ? current_lesson_data.value.priority.split(/\s*?,\s*?/g).filter(x => !!x) : []
-  const bar = { notes: [] }
+   const bar = { notes: [] }
   for (var i = 0; i < 4; i++)
-    bar.notes.push(getRandomNote(randomNotes, priorityNotes))
+    bar.notes.push(getRandomNote(current_lesson_data.value))
   bars.value.push(bar)
 }
 
@@ -277,7 +334,16 @@ function render() {
 
 }
 
+function calculateHeightWindow() {
+  const vh = window.innerHeight * 0.01; 
+  document.documentElement.style.setProperty("--vh", `${vh}px`);
+}
+
 onMounted(() => {
+
+  window.addEventListener("resize", calculateHeightWindow)
+
+  calculateHeightWindow();
 
   regenerate()
 
@@ -310,6 +376,10 @@ html {
 
 .content {
   @apply flex-grow;
-  min-height: 100vh;
+  min-height: calc(100 * var(--vh));
+}
+
+.btn {
+  @apply text-[200%];
 }
 </style>
