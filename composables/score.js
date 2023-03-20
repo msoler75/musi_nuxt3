@@ -1,8 +1,6 @@
-import { defineStore } from "pinia";
-
 import Vex from "vexflow";
 
-export const useScore = defineStore("score", () => {
+export const useScore = () => {
   const { Registry, StaveNote } = Vex;
   const lessonData = ref({});
 
@@ -206,4 +204,4 @@ export const useScore = defineStore("score", () => {
   }
 
   return { draw, globalTranspose };
-});
+}
