@@ -1,7 +1,16 @@
 <template>
   <div class="flex-expander h-full content base-100 base-content">
     <div class="overflow-x-auto mb-auto flex-grow" ref="scroller">
+      <div class="fixed right-2 top-2 text-xl font-bold">{{ currentNote }}</div>
       <div id="output" :style="{ transform: `scale(${1 + zoom / 10})` }"></div>
+    </div>
+    <div v-if="false">
+      <button class="btn btn-secondary" @click="recorder.start()">
+        Rec
+      </button>
+      <button class="btn btn-secondary" @click="recorder.stop()">
+        Stop
+      </button>
     </div>
     <div class="mt-auto p-4 space-x-4 w-full justify-between">
       <div class="flex">
@@ -30,7 +39,7 @@
         </div>
 
         <div class="flex items-center ml-auto space-x-4">
-          <button class="hidden lg:inline btn btn-secondary" @click="position = 0; pause();">
+          <button class="hidden lg:inline btn btn-secondary" @click="rewind">
             <Icon name="mdi:rewind" />
           </button>
           <button class="btn btn-secondary" @click="speed -= 10">
@@ -52,6 +61,8 @@
 <script setup>
 const settings = useSettings()
 const score = useScore()
+const pitch = usePitchDetector()
+const recorder = useRecorder()
 
 // play
 
@@ -62,15 +73,23 @@ const playIcon = computed(() => !playing.value ? 'material-symbols:play-arrow-ro
 const position = ref(0)
 const zoom = ref(1)
 const speed = ref(30)
+const currentNote = computed(()=>  (pitch.note.value && typeof pitch.note.value == 'string') ? pitch.note.value:'' )
 
 
-function restart() {
-  position.value = 0
+function rewind() {
+  position = 0;
+  pause();
 }
 
 function play() {
+  if (!pitch.running.value)
+    pitch.start()
   playing.value = true
 }
+
+watch(pitch.note, note => {
+  // console.log(note)
+})
 
 function pause() {
   playing.value = false
@@ -185,6 +204,12 @@ onMounted(() => {
   rAF = window.requestAnimationFrame || window.setTimeout(func, 1000 / 16)
 
   nextFrame()
+
+
+  pitch.init()
+
+
+  // recorder.init()
 
 })
 
