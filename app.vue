@@ -50,10 +50,8 @@
 
 
 <script setup>
-import Vex from 'vexflow';
-const { Registry, StaveNote } = Vex;
-
 const settings = useSettings()
+const score = useScore()
 
 // play
 
@@ -96,27 +94,6 @@ watch(position, value => {
 })
 
 
-// settings
-const globalTranspose = ref(0) // global transpose
-const defaultLessonSettings = {
-  maxDistance: 12, // semitones
-  priorizeDistances: [1, 2, 4, 7], // semitones
-  hasSharpedNotes: false, // dont show sharp 
-  notes: 'C4, G4'
-}
-
-
-// score
-const concat = (a, b) => a.concat(b);
-const bars = ref([])
-
-// output
-const ready = ref(false)
-
-// lessons
-const current_course = computed(() => settings.course >= 0 && settings.course < courses.value.length ? courses.value[settings.course] : null)
-const current_lesson_data = computed(() => current_course.value ? { ...defaultLessonSettings, ...current_course.value.lessons.find(les => les.name == settings.currentLesson) } : null)
-
 
 function retrocederNivel() {
   if (!current_lesson_data.value) return
@@ -132,6 +109,12 @@ function avanzarNivel() {
     settings.currentLesson = current_course.value.lessons[idx + 1].name
 }
 
+const defaultLessonSettings = {
+  maxDistance: 12, // semitones
+  priorizeDistances: [1, 2, 4, 7], // semitones
+  hasSharpedNotes: false, // dont show sharp
+  notes: "C4, G4",
+};
 const courses = ref([
   {
     name: 'treble', clef: 'treble',
@@ -162,202 +145,32 @@ const courses = ref([
       { name: 'Acordes de 3a', notes: 'B4, C4, D4, E4, F4, G4, A4, B4, C5, D5, E5', chords: ['4'] },
       { name: 'Acordes de 4a', notes: 'A4, B4, C4, D4, E4, F4, G4, A4, B4, C5, D5, E5, F5', chords: ['6'] },
       { name: 'Acordes de 5a', notes: 'G4, A4, B4, C4, D4, E4, F4, G4, A4, B4, C5, D5, E5, F5', chords: ['7'] },
-      { name: 'Acordes mix',   notes: 'F4, G4, A4, B4, C4, D4, E4, F4, G4, A4, B4, C5, D5, E5, F5, G5', chords: ['2', '4', '6', '7'] },
+      { name: 'Acordes mix', notes: 'F4, G4, A4, B4, C4, D4, E4, F4, G4, A4, B4, C5, D5, E5, F5, G5', chords: ['2', '4', '6', '7'] },
     ]
   }])
 
 
+
+// lessons
+const current_course = computed(() => settings.course >= 0 && settings.course < courses.value.length ? courses.value[settings.course] : null)
+const current_lesson_data = computed(() => current_course.value ? { ...defaultLessonSettings, ...current_course.value.lessons.find(les => les.name == settings.currentLesson) } : null)
+
+
+
 watch(current_lesson_data, value => {
   if (!value) return
-  position.value = 0
-  regenerate()
+  drawScore()
 })
-
-function regenerate() {
-  if (!current_lesson_data.value) return
-  ready.value = false
-  playing.value = false
-  position.value = 0
-  bars.value.splice(0, bars.value.length)
-  addbars(current_lesson_data.value.notes.length * 1.25)
-  render()
-}
-
-const semitones = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
-function transposeNote(note, transpose) {
-  if (!transpose) return note
-  return note.replace(/(\w[#b]?)(\d)/, function (match, note, octave) {
-    octave = parseInt(octave)
-    var idx = semitones.findIndex(snote => snote == note)
-    console.assert(idx >= 0, "idx es cero")
-    idx+=transpose
-    while (idx >= 12) {
-      idx -= 12
-      octave++
-    }
-    return semitones[idx] + octave
-  })
-}
-
-// distance in semitones
-function getDistance(note1, note2) {
-  const o1 = parseInt(note1.match(/\d/))
-  const o2 = parseInt(note2.match(/\d/))
-  const n1 = note1.replace(/\d+/, '')
-  const n2 = note2.replace(/\d+/, '')
-  var idx1 = note1 ? semitones.findIndex(snote => snote == n1) : 0
-  var idx2 = semitones.findIndex(snote => snote == n2)
-  const dist = Math.abs(idx1 + o1 * 12 - (idx2 + o2 * 12))
-  return dist
-}
-
-function isSharp(note) {
-  return note.indexOf("#")>=0
-}
-
-var lastNote = "C3"  // sirve para que no se repitan notas tan a menudo
-function getRandomNote(settings) {
-  const arr = settings.notes.split(/\s*,\s*/g).filter(x => !!x)
-  const priority = settings.priority ? settings.priority.split(/\s*?,\s*?/g).filter(x => !!x) : []
-  var idx
-  var distance = 2
-  var loops = 24
-  var bestNote
-  var bestScore = 0
-  var fail = false
-  do {
-    idx = Math.floor(Math.random() * arr.length)
-    var note = arr[idx]
-    distance = getDistance(lastNote, note)
-    const cond1 = distance < settings.maxDistance || Math.random() < .05 // el 95% de los intervalos deben estar dentro del rango máximo
-    const cond2 = settings.priorizeDistances.includes(distance) || Math.random() > .85 // el 85% de intervalos deberían de estar entre la lista
-    const cond3 = settings.hasSharpedNotes || !isSharp(note) // en el 100% de los casos no puede haber notas sharp, si no está permitido
-    const cond4 = !priority.length || priority.includes(note) || Math.random() < .5 // si hay notas de prioridad, el 50% deben ser prioritarias
-    const cond5 = lastNote != note // no deben repetirse notas
-    const score1 = cond1 ? 1 : 0
-    const score2 = cond2 ? 1 : 0
-    const score3 = cond3 ? 1 : 0
-    const score4 = cond4 ? 1 : 0
-    const score5 = cond5 ? 2 : 0
-    const score = score1 + score2 + score3 + score4 + score5
-    fail = score < 6
-    if (score > bestScore) {
-      bestNote = note
-      bestScore = score
-    }
-  } while (loops-- > 0 && fail)
-
-  lastNote = bestNote
-  var finalNote = transposeNote(bestNote, globalTranspose.value)
-  if (settings.chords) {
-    const idx = Math.floor(Math.random() * settings.chords.length)
-    const chord = settings.chords[idx].split(/\s*,\s*/).map(x => parseInt(x))
-    const notes = [finalNote]
-    for (const extra of chord) {
-      var addedNote = transposeNote(finalNote, extra)
-      const cond = settings.hasSharpedNotes || !isSharp(addedNote)
-      if (!cond)
-        addedNote = transposeNote(addedNote, -1)
-      notes.push(addedNote)
-    }
-    finalNote = "(" + notes.join(" ") + ")"
-  }
-  return finalNote
-}
-
-
-
-function addbar() {
-  if (!current_lesson_data.value) return
-  const bar = { notes: [] }
-  for (var i = 0; i < 4; i++)
-    bar.notes.push(getRandomNote(current_lesson_data.value))
-  bars.value.push(bar)
-}
-
-function addbars(num) {
-  for (var i = 0; i < num; i++)
-    addbar()
-}
-
-function render() {
-
-  document.getElementById('output').innerHTML = ''
-
-  const { Factory, EasyScore, System } = Vex.Flow;
-
-  const f = new Factory({
-    renderer: { elementId: 'output', width: 200 + bars.value.length * 220, height: 200 },
-  });
-
-  const score = f.EasyScore();
-
-  const registry = new Registry();
-  Registry.enableDefaultRegistry(registry);
-
-  // Retrieve the element from the registry and cast to StaveNote, so we can call .addModifier( ) later.
-  const id = (id) => registry.getElementById(id);
-
-
-  // Bind these three functions so the code looks cleaner.
-  // Instead of score.voice(...), just call voice(...).
-  const voice = score.voice.bind(score);
-  const notes = score.notes.bind(score);
-  const beam = score.beam.bind(score);
-
-  let x = 120;
-  let y = 80;
-
-  function appendSystem(width) {
-    const system2 = f.System({ x, y, width, spaceBetweenStaves: 10 });
-    x += width;
-    return system2;
-  }
-
-  score.set({ time: '4/4' });
-
-  for (var i = 0; i < bars.value.length; i++) {
-    const bar = bars.value[i]
-
-    const notestr = bar.notes.map(note => note + '/q').join(',')
-
-    let system = appendSystem(220);
-
-    let r = system
-      .addStave({
-        voices: [
-          voice([notes(notestr)].reduce(concat)),
-        ],
-      })
-
-
-    /* system
-    .addStave({ voices: [voice(notes('(G3 B3 D4)/h, A3/q, A2/q', { clef: 'bass' }))] })
-    .addClef('bass')
-    .addKeySignature('C')
-    .addTimeSignature('4/4');
-    */
-
-    if (i == 0) {
-      r
-        .addClef(current_course.value.clef)
-        .addKeySignature('C')
-        .addTimeSignature('4/4');
-
-      system.addConnector('singleLeft');
-
-    }
-    system.addConnector('singleRight');
-
-  }
-
-  f.draw();
-
-}
 
 function calculateHeightWindow() {
   const vh = window.innerHeight * 0.01;
   document.documentElement.style.setProperty("--vh", `${vh}px`);
+}
+
+function drawScore() {
+  playing.value = false;
+  position.value = 0;
+  score.draw(document.querySelector("#output"), current_lesson_data.value, current_course.value.clef)
 }
 
 onMounted(() => {
@@ -366,7 +179,7 @@ onMounted(() => {
 
   calculateHeightWindow();
 
-  regenerate()
+  drawScore()
 
   // start scrolling
   rAF = window.requestAnimationFrame || window.setTimeout(func, 1000 / 16)

@@ -18,6 +18,7 @@
     "daisyui": "^2.51.4",
     "nuxt-icon": "^0.3.3",
     "vexflow": "^4.1.0",
-    "vextab": "^3.0.6"
+    "vextab": "^3.0.6",
+    "web-audio-daw": "^4.13.2"
   }
 }
