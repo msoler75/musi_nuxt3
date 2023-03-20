@@ -1,8 +1,7 @@
 <template>
   <div class="flex-expander h-full content base-100 base-content">
     <div class="overflow-x-auto mb-auto flex-grow" ref="scroller">
-      <div id="output"
-      :style="{transform: `scale(${1+zoom/10})`}"></div>
+      <div id="output" :style="{ transform: `scale(${1 + zoom / 10})` }"></div>
     </div>
     <div class="mt-auto p-4 space-x-4 w-full justify-between">
       <div class="flex">
@@ -28,7 +27,7 @@
           <button class="btn btn-secondary" @click="zoom--">
             <Icon name="octicon:zoom-out-16" />
           </button>
-          </div>
+        </div>
 
         <div class="flex items-center ml-auto space-x-4">
           <button class="hidden lg:inline btn btn-secondary" @click="position = 0; pause();">
@@ -98,49 +97,12 @@ watch(position, value => {
 
 
 // settings
-const transpose = ref(0) // global transpose
+const globalTranspose = ref(0) // global transpose
 const defaultLessonSettings = {
   maxDistance: 12, // semitones
-  priorizeDistances: [2, 4, 7], // semitones
-  hasSharpedNotes: false // dont show sharp 
-}
-
-
-var lastNote = "C3"  // sirve para que no se repitan notas tan a menudo
-function getRandomNote(settings) {
-  const arr = settings.notes.split(/\s*,\s*/g).filter(x => !!x)
-  const priority = settings.priority ? settings.priority.split(/\s*?,\s*?/g).filter(x => !!x) : []
-  var idx
-  var distance = 2
-  var loops = 24
-  var bestNote
-  var bestScore = 0
-  var fail = false
-  do {
-    idx = Math.floor(Math.random() * arr.length)
-    var note = arr[idx]
-    distance = getDistance(lastNote, note)
-    const cond1 = distance<settings.maxDistance || Math.random() < .05 // el 95% de los intervalos deben estar dentro del rango máximo
-    const cond2 = settings.priorizeDistances.includes(distance) || Math.random()<.5 // el 50% de intervalos deberían de estar entre la lista
-    const cond3 = settings.hasSharpedNotes || note.indexOf('#')==-1 // en el 100% de los casos no puede haber notas sharp, si no está permitido
-    const cond4 = !priority.length || priority.includes(note) || Math.random()<.5 // si hay notas de prioridad, el 50% deben ser prioritarias
-    const cond5 = lastNote != note // no deben repetirse notas
-    const score1 = cond1?1:0 
-    const score2 = cond2?1:0 
-    const score3 = cond3?1:0 
-    const score4 = cond4?1:0 
-    const score5 = cond5?2:0 
-    const score = score1+score2+score3+score4+score5
-    fail = score<6
-    if(score>bestScore) {
-      bestNote = note
-      bestScore = score
-    }
-  } while (loops-->0 && fail)
-
-  lastNote = bestNote
-  console.log(note, "!")
-  return transposeNote(arr[idx])
+  priorizeDistances: [1, 2, 4, 7], // semitones
+  hasSharpedNotes: false, // dont show sharp 
+  notes: 'C4, G4'
 }
 
 
@@ -153,7 +115,7 @@ const ready = ref(false)
 
 // lessons
 const current_course = computed(() => settings.course >= 0 && settings.course < courses.value.length ? courses.value[settings.course] : null)
-const current_lesson_data = computed(() => current_course.value ? {...defaultLessonSettings, ...current_course.value.lessons.find(les => les.name == settings.currentLesson)} : null)
+const current_lesson_data = computed(() => current_course.value ? { ...defaultLessonSettings, ...current_course.value.lessons.find(les => les.name == settings.currentLesson) } : null)
 
 
 function retrocederNivel() {
@@ -174,7 +136,6 @@ const courses = ref([
   {
     name: 'treble', clef: 'treble',
     lessons: [
-    { name: 'test', notes: 'G3, C4, G4, C5, G5, C6' },
       { name: 'E, G', notes: 'E4, G4' },
       { name: 'Añade F4', notes: 'E4, G4, F4' },
       { name: 'Añade C5', notes: 'E4, G4, F4, C5', priority: 'C5' },
@@ -197,6 +158,11 @@ const courses = ref([
       { name: 'Añade E6', notes: 'F3 ,G3, A3, B3, C4, D4, E4, G4, F4, A4, B4, C5, D5, E5, F5, G5, A5, B5, C6, D6, E6', priority: 'E6' },
       { name: 'Lineas superiores', notes: 'F3 ,G3, A3, B3, C4, D4, E4, G4, F4, A4, B4, C5, D5, E5, F5, G5, A5, B5, C6, D6, E6', priority: 'G5, A5, B5, C6, D6, E6' },
       { name: 'Examen 2', notes: 'F3 ,G3, A3, B3, C4, D4, E4, G4, F4, A4, B4, C5, D5, E5, F5, G5, A5, B5, C6, D6, E6' },
+      { name: 'Acordes de 2a', notes: 'C4, D4, E4, F4, G4, A4, B4, C5, D5, E5', chords: ['2'] },
+      { name: 'Acordes de 3a', notes: 'B4, C4, D4, E4, F4, G4, A4, B4, C5, D5, E5', chords: ['4'] },
+      { name: 'Acordes de 4a', notes: 'A4, B4, C4, D4, E4, F4, G4, A4, B4, C5, D5, E5, F5', chords: ['6'] },
+      { name: 'Acordes de 5a', notes: 'G4, A4, B4, C4, D4, E4, F4, G4, A4, B4, C5, D5, E5, F5', chords: ['7'] },
+      { name: 'Acordes mix',   notes: 'F4, G4, A4, B4, C4, D4, E4, F4, G4, A4, B4, C5, D5, E5, F5, G5', chords: ['2', '4', '6', '7'] },
     ]
   }])
 
@@ -218,12 +184,14 @@ function regenerate() {
 }
 
 const semitones = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
-function transposeNote(note) {
+function transposeNote(note, transpose) {
+  if (!transpose) return note
   return note.replace(/(\w[#b]?)(\d)/, function (match, note, octave) {
     octave = parseInt(octave)
     var idx = semitones.findIndex(snote => snote == note)
-    idx += transpose.value
-    while (idx > 12) {
+    console.assert(idx >= 0, "idx es cero")
+    idx+=transpose
+    while (idx >= 12) {
       idx -= 12
       octave++
     }
@@ -235,20 +203,73 @@ function transposeNote(note) {
 function getDistance(note1, note2) {
   const o1 = parseInt(note1.match(/\d/))
   const o2 = parseInt(note2.match(/\d/))
-  const n1 = note1.replace(/\d+/,'')
-  const n2 = note2.replace(/\d+/,'')
-  var idx1 = note1?semitones.findIndex(snote => snote == n1):0
+  const n1 = note1.replace(/\d+/, '')
+  const n2 = note2.replace(/\d+/, '')
+  var idx1 = note1 ? semitones.findIndex(snote => snote == n1) : 0
   var idx2 = semitones.findIndex(snote => snote == n2)
-  const dist = Math.abs(idx1+o1*12-(idx2+o2*12) )
+  const dist = Math.abs(idx1 + o1 * 12 - (idx2 + o2 * 12))
   return dist
+}
+
+function isSharp(note) {
+  return note.indexOf("#")>=0
+}
+
+var lastNote = "C3"  // sirve para que no se repitan notas tan a menudo
+function getRandomNote(settings) {
+  const arr = settings.notes.split(/\s*,\s*/g).filter(x => !!x)
+  const priority = settings.priority ? settings.priority.split(/\s*?,\s*?/g).filter(x => !!x) : []
+  var idx
+  var distance = 2
+  var loops = 24
+  var bestNote
+  var bestScore = 0
+  var fail = false
+  do {
+    idx = Math.floor(Math.random() * arr.length)
+    var note = arr[idx]
+    distance = getDistance(lastNote, note)
+    const cond1 = distance < settings.maxDistance || Math.random() < .05 // el 95% de los intervalos deben estar dentro del rango máximo
+    const cond2 = settings.priorizeDistances.includes(distance) || Math.random() > .85 // el 85% de intervalos deberían de estar entre la lista
+    const cond3 = settings.hasSharpedNotes || !isSharp(note) // en el 100% de los casos no puede haber notas sharp, si no está permitido
+    const cond4 = !priority.length || priority.includes(note) || Math.random() < .5 // si hay notas de prioridad, el 50% deben ser prioritarias
+    const cond5 = lastNote != note // no deben repetirse notas
+    const score1 = cond1 ? 1 : 0
+    const score2 = cond2 ? 1 : 0
+    const score3 = cond3 ? 1 : 0
+    const score4 = cond4 ? 1 : 0
+    const score5 = cond5 ? 2 : 0
+    const score = score1 + score2 + score3 + score4 + score5
+    fail = score < 6
+    if (score > bestScore) {
+      bestNote = note
+      bestScore = score
+    }
+  } while (loops-- > 0 && fail)
+
+  lastNote = bestNote
+  var finalNote = transposeNote(bestNote, globalTranspose.value)
+  if (settings.chords) {
+    const idx = Math.floor(Math.random() * settings.chords.length)
+    const chord = settings.chords[idx].split(/\s*,\s*/).map(x => parseInt(x))
+    const notes = [finalNote]
+    for (const extra of chord) {
+      var addedNote = transposeNote(finalNote, extra)
+      const cond = settings.hasSharpedNotes || !isSharp(addedNote)
+      if (!cond)
+        addedNote = transposeNote(addedNote, -1)
+      notes.push(addedNote)
+    }
+    finalNote = "(" + notes.join(" ") + ")"
   }
-  
+  return finalNote
+}
 
 
 
 function addbar() {
   if (!current_lesson_data.value) return
-   const bar = { notes: [] }
+  const bar = { notes: [] }
   for (var i = 0; i < 4; i++)
     bar.notes.push(getRandomNote(current_lesson_data.value))
   bars.value.push(bar)
@@ -335,7 +356,7 @@ function render() {
 }
 
 function calculateHeightWindow() {
-  const vh = window.innerHeight * 0.01; 
+  const vh = window.innerHeight * 0.01;
   document.documentElement.style.setProperty("--vh", `${vh}px`);
 }
 
