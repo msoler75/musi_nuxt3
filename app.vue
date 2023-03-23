@@ -1,5 +1,7 @@
 <template>
   <div class="flex-expander h-full content base-100 base-content">
+    <div class="fixed left-2 top-2">{{ Math.round(performance * 100) + '%' }} {{ hits }}/{{ hits + fails }} {{ nextNote }}
+    </div>
     <div class="overflow-x-auto mb-auto flex-grow" ref="scroller">
       <div class="fixed right-2 top-2 text-xl font-bold">{{ currentNote }}</div>
       <div id="output" :style="{ transform: `scale(${1 + zoom / 10})` }"></div>
@@ -39,7 +41,7 @@
         </div>
 
         <div class="flex items-center ml-auto space-x-4">
-          <button class="hidden lg:inline btn btn-secondary" @click="rewind">
+          <button class="btn btn-secondary" @click="rewind">
             <Icon name="mdi:rewind" />
           </button>
           <button class="btn btn-secondary" @click="speed -= 10">
@@ -71,13 +73,30 @@ const scroller = ref(null)
 const playing = ref(false)
 const playIcon = computed(() => !playing.value ? 'material-symbols:play-arrow-rounded' : 'material-symbols:pause')
 const position = ref(0)
+const notePosition = ref(0)
+const hits = ref(0)
+const fails = ref(0)
+const performance = computed(() => hits.value / (0.0001 + hits.value + fails.value))
 const zoom = ref(1)
 const speed = ref(30)
-const currentNote = computed(()=>  (pitch.note.value && typeof pitch.note.value == 'string') ? pitch.note.value:'' )
+const lastNoteKeyboard = ref(null)
+const currentNote = computed(() => lastNoteKeyboard.value ? lastNoteKeyboard.value : (pitch.note.value && typeof pitch.note.value == 'string') ? pitch.note.value : '')
 
 
 function rewind() {
-  position = 0;
+  hits.value = 0
+  fails.value = 0
+  position.value = 0;
+  var elements = document.querySelectorAll('.note-hit, .note-fail')
+  for(var i=0;i<elements.length;i++) {
+    elements[i].classList.remove('note-fail')
+    elements[i].classList.remove('note-hit')
+  }
+  
+  notePosition.value = 0
+  highlightNextNote()
+  scrollToNextNote()
+
   pause();
 }
 
@@ -89,7 +108,10 @@ function play() {
 
 watch(pitch.note, note => {
   // console.log(note)
+  checkPlayedNote(note)
 })
+
+
 
 function pause() {
   playing.value = false
@@ -139,32 +161,36 @@ const courses = ref([
     name: 'treble', clef: 'treble',
     lessons: [
       { name: 'E, G', notes: 'E4, G4' },
-      { name: 'Añade F4', notes: 'E4, G4, F4' },
-      { name: 'Añade C5', notes: 'E4, G4, F4, C5', priority: 'C5' },
-      { name: 'Añade B4', notes: 'E4, G4, F4, B4, C5', priority: 'B4' },
-      { name: 'Añade A4', notes: 'E4, G4, F4, A4, B4, C5', priority: 'A4' },
-      { name: 'Añade D5', notes: 'E4, G4, F4, A4, B4, C5, D5', priority: 'D5' },
-      { name: 'Añade E5', notes: 'E4, G4, F4, A4, B4, C5, D5, E5', priority: 'E5' },
-      { name: 'Añade F5', notes: 'E4, G4, F4, A4, B4, C5, D5, E5, F5', priority: 'F5' },
+      { name: '+F4', notes: 'E4, G4, F4' },
+      { name: '+C5', notes: 'E4, G4, F4, C5', priority: 'C5' },
+      { name: '+B4', notes: 'E4, G4, F4, B4, C5', priority: 'B4' },
+      { name: '+A4', notes: 'E4, G4, F4, A4, B4, C5', priority: 'A4' },
+      { name: '+D5', notes: 'E4, G4, F4, A4, B4, C5, D5', priority: 'D5' },
+      { name: '+E5', notes: 'E4, G4, F4, A4, B4, C5, D5, E5', priority: 'E5' },
+      { name: '+F5', notes: 'E4, G4, F4, A4, B4, C5, D5, E5, F5', priority: 'F5' },
       { name: 'Examen 1', notes: 'E4, G4, F4, A4, B4, C5, D5, E5, F5' },
-      { name: 'Añade C4, D4', notes: 'C4, D4, E4, G4, F4, A4, B4, C5, D5, E5, F5', priority: 'C4, D4' },
-      { name: 'Añade B3', notes: 'B3, C4, D4, E4, G4, F4, A4, B4, C5, D5, E5, F5', priority: 'B3' },
-      { name: 'Añade A3', notes: 'A3, B3, C4, D4, E4, G4, F4, A4, B4, C5, D5, E5, F5', priority: 'A3' },
-      { name: 'Añade G3', notes: 'G3, A3, B3, C4, D4, E4, G4, F4, A4, B4, C5, D5, E5, F5', priority: 'G3' },
-      { name: 'Añade F3', notes: 'F3 ,G3, A3, B3, C4, D4, E4, G4, F4, A4, B4, C5, D5, E5, F5', priority: 'F3' },
-      { name: 'Lineas inferiores', notes: 'F3 ,G3, A3, B3, C4, D4, E4, G4, F4, A4, B4, C5, D5, E5, F5', priority: 'F3, G3, A3, B3, C4' },
-      { name: 'Añade G5, A5', notes: 'F3 ,G3, A3, B3, C4, D4, E4, G4, F4, A4, B4, C5, D5, E5, F5, G5, A5', priority: 'G5, A5' },
-      { name: 'Añade B5', notes: 'F3 ,G3, A3, B3, C4, D4, E4, G4, F4, A4, B4, C5, D5, E5, F5, G5, A5, B5', priority: 'B5' },
-      { name: 'Añade C6', notes: 'F3 ,G3, A3, B3, C4, D4, E4, G4, F4, A4, B4, C5, D5, E5, F5, G5, A5, B5, C6', priority: 'C6' },
-      { name: 'Añade D6', notes: 'F3 ,G3, A3, B3, C4, D4, E4, G4, F4, A4, B4, C5, D5, E5, F5, G5, A5, B5, C6, D6', priority: 'D6' },
-      { name: 'Añade E6', notes: 'F3 ,G3, A3, B3, C4, D4, E4, G4, F4, A4, B4, C5, D5, E5, F5, G5, A5, B5, C6, D6, E6', priority: 'E6' },
-      { name: 'Lineas superiores', notes: 'F3 ,G3, A3, B3, C4, D4, E4, G4, F4, A4, B4, C5, D5, E5, F5, G5, A5, B5, C6, D6, E6', priority: 'G5, A5, B5, C6, D6, E6' },
+      { name: '+C4, D4', notes: 'C4, D4, E4, G4, F4, A4, B4, C5, D5, E5, F5', priority: 'C4, D4' },
+      { name: '+B3', notes: 'B3, C4, D4, E4, G4, F4, A4, B4, C5, D5, E5', priority: 'B3' },
+      { name: '+A3', notes: 'A3, B3, C4, D4, E4, G4, F4, A4, B4, C5, D5', priority: 'A3' },
+      { name: '+G3', notes: 'G3, A3, B3, C4, D4, E4, G4, F4, A4, B4', priority: 'G3' },
+      { name: '+F3', notes: 'F3 ,G3, A3, B3, C4, D4, E4, G4, F4, A4', priority: 'F3' },
+      { name: 'Lineas inferiores', notes: 'F3 ,G3, A3, B3, C4, D4, E4, G4, F4', priority: 'F3, G3, A3, B3, C4' },
+      { name: '+G5, A5', notes: 'A3, B3, C4, D4, E4, G4, F4, A4, B4, C5, D5, E5, F5, G5, A5', priority: 'G5, A5' },
+      { name: '+B5', notes: 'B3, C4, D4, E4, G4, F4, A4, B4, C5, D5, E5, F5, G5, A5, B5', priority: 'B5' },
+      { name: '+C6', notes: 'C4, D4, E4, G4, F4, A4, B4, C5, D5, E5, F5, G5, A5, B5, C6', priority: 'C6' },
+      { name: '+D6', notes: 'D4, E4, G4, F4, A4, B4, C5, D5, E5, F5, G5, A5, B5, C6, D6', priority: 'D6' },
+      { name: '+E6', notes: 'E4, G4, F4, A4, B4, C5, D5, E5, F5, G5, A5, B5, C6, D6, E6', priority: 'E6' },
+      { name: 'Lineas superiores', notes: 'D5, E5, F5, G5, A5, B5, C6, D6, E6', priority: 'G5, A5, B5, C6, D6, E6' },
       { name: 'Examen 2', notes: 'F3 ,G3, A3, B3, C4, D4, E4, G4, F4, A4, B4, C5, D5, E5, F5, G5, A5, B5, C6, D6, E6' },
       { name: 'Acordes de 2a', notes: 'C4, D4, E4, F4, G4, A4, B4, C5, D5, E5', chords: ['2'] },
       { name: 'Acordes de 3a', notes: 'B4, C4, D4, E4, F4, G4, A4, B4, C5, D5, E5', chords: ['4'] },
       { name: 'Acordes de 4a', notes: 'A4, B4, C4, D4, E4, F4, G4, A4, B4, C5, D5, E5, F5', chords: ['6'] },
       { name: 'Acordes de 5a', notes: 'G4, A4, B4, C4, D4, E4, F4, G4, A4, B4, C5, D5, E5, F5', chords: ['7'] },
       { name: 'Acordes mix', notes: 'F4, G4, A4, B4, C4, D4, E4, F4, G4, A4, B4, C5, D5, E5, F5, G5', chords: ['2', '4', '6', '7'] },
+      { name: 'Triadas 1', notes: 'F3 ,G3, A3, B3, C4, D4, E4, G4, F4, A4, B4, C5, D5, E5, F5, G5', chords: ['4,7'] },
+      { name: '1a inversión', notes: 'F3 ,G3, A3, C4, D4, E4, G4, F4, A4, C5, D5, E5, F5, G5', chords: ['6,9'] },
+      { name: '2a inversión', notes: 'F3 ,G3, A3, B3, C4, D4, E4, G4, F4, A4, B4, C5, D5, E5, F5, G5', chords: ['4,9'] },
+      { name: 'Triadas Mix', notes: 'F3 ,G3, A3, C4, D4, E4, G4, F4, A4, C5, D5, E5, F5, G5', chords: ['4,7', '6,9', '4,9'] },
     ]
   }])
 
@@ -209,9 +235,96 @@ onMounted(() => {
   pitch.init()
 
 
+  window.addEventListener('keydown', onKey)
+
   // recorder.init()
 
+  highlightNextNote()
+
 })
+
+function onUnmount() {
+  window.removeEventListener('keydown', this.onKey);
+}
+
+// incomplete keyboard to test
+function onKey(ev) {
+  // obtener la tecla pulsada
+  const key = ev.key.toLowerCase();
+  // determinar la nota correspondiente
+  let note = null;
+  switch (key) {
+    case 'q': note = 'C4'; break;
+    case 'w': note = 'D4'; break;
+    case 'e': note = 'E4'; break;
+    case 'r': note = 'F4'; break;
+    case 't': note = 'G4'; break;
+    case 'y': note = 'A4'; break;
+    case 'u': note = 'B4'; break;
+    case 'i': note = 'C5'; break;
+    case 'o': note = 'D5'; break;
+    case 'p': note = 'E5'; break;
+    case '2': note = 'C#5'; break;
+    case '3': note = 'D#5'; break;
+    case '5': note = 'F#5'; break;
+    case '6': note = 'G#5'; break;
+    case '7': note = 'A#5'; break;
+    default:
+      note = null
+  }
+  switch (ev.keyCode) {
+    case 186: note = 'F5'; break;
+    case 187: note = 'G5'; break;
+  }
+  // guardar la última nota tocada en la variable lastNoteKeyboard
+  lastNoteKeyboard.value = note;
+  if (note)
+    checkPlayedNote(note)
+}
+
+
+const nextNote = computed(() => notePosition.value < score.notesSequence.value.length ? score.notesSequence.value[notePosition.value] : null)
+
+watch(score.notesSequence, ()=> {rewind()})
+
+function checkPlayedNote(note) {
+  if (!nextNote.value) return
+  if (note == nextNote.value.note) {
+    hits.value++
+    addClassToNote('note-hit')
+  }
+  else {
+    fails.value++
+    addClassToNote('note-fail')
+  }
+  // next Note move
+  notePosition.value++
+  scrollToNextNote()
+  highlightNextNote()
+}
+
+
+function scrollToNextNote() {
+  const element = document.getElementById('vf-'+nextNote.value.id)
+  if (element) {
+    element.scrollIntoView({
+      behavior: 'smooth',
+      inline: 'center'
+    });
+  }
+}
+
+function highlightNextNote() {
+  var element = document.querySelector('.next-note')
+  if(element) element.classList.remove('next-note')
+  addClassToNote('next-note')
+}
+
+function addClassToNote(cls) {
+  if(!nextNote.value) return
+  const element = document.getElementById('vf-'+nextNote.value.id)
+  element.classList.add(cls)
+}
 
 </script>
 
@@ -219,6 +332,10 @@ onMounted(() => {
 
 
 <style>
+
+.next-note {stroke: blue; fill: blue}
+.note-hit {stroke: green; fill: green}
+.note-fail {stroke:red; fill: red}
 * {
   box-sizing: border-box;
 }

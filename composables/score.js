@@ -9,7 +9,9 @@ export const useScore = () => {
 
   // score
   const concat = (a, b) => a.concat(b);
+  const notesSequence = ref([])
   const bars = ref([]);
+
 
   function draw(domElement, _lessonData, clef) {
     if (!_lessonData) return;
@@ -87,7 +89,7 @@ export const useScore = () => {
         settings.priorizeDistances.includes(distance) || Math.random() > 0.85; // el 85% de intervalos deberían de estar entre la lista
       const cond3 = settings.hasSharpedNotes || !isSharp(note); // en el 100% de los casos no puede haber notas sharp, si no está permitido
       const cond4 =
-        !priority.length || priority.includes(note) || Math.random() < 0.5; // si hay notas de prioridad, el 50% deben ser prioritarias
+        !priority.length || priority.includes(note) || Math.random() < 0.4; // si hay notas de prioridad, el 60% de intentos deben ser notas prioritarias
       const cond5 = lastNote != note; // no deben repetirse notas
       const score1 = cond1 ? 1 : 0;
       const score2 = cond2 ? 1 : 0;
@@ -121,10 +123,17 @@ export const useScore = () => {
     return finalNote;
   }
 
+  
   function addbar() {
     if (!lessonData.value) return;
     const bar = { notes: [] };
-    for (var i = 0; i < 4; i++) bar.notes.push(getRandomNote(lessonData.value));
+    for (var i = 0; i < 4; i++) 
+    {
+      const id = notesSequence.value.length
+      const note = getRandomNote(lessonData.value)
+      notesSequence.value.push({note, id})
+      bar.notes.push(note+`/q[id="${id}"]`);
+    }
     bars.value.push(bar);
   }
 
@@ -175,7 +184,7 @@ export const useScore = () => {
     for (var i = 0; i < bars.value.length; i++) {
       const bar = bars.value[i];
 
-      const notestr = bar.notes.map((note) => note + "/q").join(",");
+      const notestr = bar.notes.map((note) => note).join(",");
 
       let system = appendSystem(220);
 
@@ -203,5 +212,5 @@ export const useScore = () => {
     f.draw();
   }
 
-  return { draw, globalTranspose };
+  return { draw, globalTranspose, notesSequence };
 }
