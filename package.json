@@ -17,8 +17,8 @@
     "@pinia/nuxt": "^0.4.7",
     "daisyui": "^2.51.4",
     "nuxt-icon": "^0.3.3",
+    "pitchy": "^4.0.7",
     "vexflow": "^4.1.0",
-    "vextab": "^3.0.6",
-    "web-audio-daw": "^4.13.2"
+    "vextab": "^3.0.6"
   }
 }

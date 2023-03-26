@@ -1,9 +1,11 @@
 <template>
   <div class="flex-expander h-full content base-100 base-content">
-    <div class="fixed left-2 top-2">{{ Math.round(performance * 100) + '%' }} {{ hits }}/{{ hits + fails }} {{ nextNote }}
+    <div class="fixed left-2 top-2">{{ Math.round(performance * 100) + '%' }} {{ hits }}/{{ hits + fails }} {{ nextNote ?
+      nextNote.note : "" }}
     </div>
     <div class="overflow-x-auto mb-auto flex-grow" ref="scroller">
-      <div class="fixed right-2 top-2 text-xl font-bold">{{ currentNote }}</div>
+      <div class="fixed right-2 top-2 text-xl font-bold">{{ clearNote }}
+      </div>
       <div id="output" :style="{ transform: `scale(${1 + zoom / 10})` }"></div>
     </div>
     <div v-if="false">
@@ -40,6 +42,7 @@
           </button>
         </div>
 
+
         <div class="flex items-center ml-auto space-x-4">
           <button class="btn btn-secondary" @click="rewind">
             <Icon name="mdi:rewind" />
@@ -54,6 +57,20 @@
             <Icon :name="playIcon" />
           </button>
         </div>
+
+        <div class="flex items-center ml-auto space-x-4">
+          <button class="btn text-red-500" @click="escuchar">
+            <Icon name="mdi:checkbox-blank-circle" />
+          </button>
+        </div>
+
+      </div>
+    </div>
+    <input type="checkbox" v-model="showModal" class="modal-toggle" />
+    <div class="modal">
+      <div class="modal-box text-center py-8 text-lg font-bold">
+        <p v-if="muestreado" >¡Calibrado!</p>
+        <p v-else>Pulsa la tecla {{ nextNote ? nextNote.note : '' }}</p>
       </div>
     </div>
   </div>
@@ -61,10 +78,13 @@
 
 
 <script setup>
+
 const settings = useSettings()
 const score = useScore()
-const pitch = usePitchDetector()
+const tuner = useTuner()
 const recorder = useRecorder()
+const muestreado = ref(false)
+const showModal = ref(false)
 
 // play
 
@@ -80,38 +100,66 @@ const performance = computed(() => hits.value / (0.0001 + hits.value + fails.val
 const zoom = ref(1)
 const speed = ref(30)
 const lastNoteKeyboard = ref(null)
-const currentNote = computed(() => lastNoteKeyboard.value ? lastNoteKeyboard.value : (pitch.note.value && typeof pitch.note.value == 'string') ? pitch.note.value : '')
-
+// const currentNote = computed(() => tuner.note.value) // ? tuner.note.value : lastNoteKeyboard.value ? lastNoteKeyboard.value : '')
+const clearNote = computed(() => tuner.clarity.value > .8 ? tuner.note.value : '')
 
 function rewind() {
-  hits.value = 0
-  fails.value = 0
-  position.value = 0;
-  var elements = document.querySelectorAll('.note-hit, .note-fail')
-  for(var i=0;i<elements.length;i++) {
-    elements[i].classList.remove('note-fail')
-    elements[i].classList.remove('note-hit')
+  if (calibrating.value) {
+    hits.value = 0
+    fails.value = 0
+    position.value = 0;
+    var elements = document.querySelectorAll('.note-hit, .note-fail')
+    for (var i = 0; i < elements.length; i++) {
+      elements[i].classList.remove('note-fail')
+      elements[i].classList.remove('note-hit')
+    }
+
+    notePosition.value = 0
+    highlightNextNote()
+    scrollToNextNote()
   }
-  
-  notePosition.value = 0
-  highlightNextNote()
-  scrollToNextNote()
 
   pause();
 }
 
 function play() {
-  if (!pitch.running.value)
-    pitch.start()
   playing.value = true
 }
 
-watch(pitch.note, note => {
-  // console.log(note)
-  checkPlayedNote(note)
+
+var prevNote = ""
+function getNoteValueIgnoringSharp(note) {
+  return note.replace(/\d+/, '').replace("#", "")
+}
+
+
+
+var lastNoteTime = 0
+watch(() => tuner.note.value, note => {
+  const now = +new Date();
+  if (tuner.clarity.value < 0.8) return
+  console.log('note_change', note)
+  if (note != prevNote) {
+    if (note) {
+      lastNoteTime = now
+      if (!prevNote || getNoteValueIgnoringSharp(prevNote) != getNoteValueIgnoringSharp(note)) {
+        checkPlayedNote(note)
+      }
+    }
+  }
+  prevNote = note
 })
 
 
+
+function escuchar() {
+  tuner.start()
+  console.log('escuchar')
+  if (!muestreado.value) {
+    calibrating.value = true
+    showModal.value = true
+  }
+}
 
 function pause() {
   playing.value = false
@@ -133,7 +181,6 @@ function nextFrame() {
 watch(position, value => {
   scroller.value.scrollLeft = value
 })
-
 
 
 function retrocederNivel() {
@@ -231,15 +278,14 @@ onMounted(() => {
 
   nextFrame()
 
-
-  pitch.init()
-
+  // nextTick(() => tuner.start())
 
   window.addEventListener('keydown', onKey)
 
   // recorder.init()
 
-  highlightNextNote()
+  if (!calibrating.value)
+    highlightNextNote()
 
 })
 
@@ -282,30 +328,70 @@ function onKey(ev) {
     checkPlayedNote(note)
 }
 
+const calibrating = ref(true)
+const notesSequence = computed(() => calibrating.value ? notesCalibrate : score.notesSequence.value)
+const nextNote = computed(() => notePosition.value < notesSequence.value.length ? notesSequence.value[notePosition.value] : null)
 
-const nextNote = computed(() => notePosition.value < score.notesSequence.value.length ? score.notesSequence.value[notePosition.value] : null)
+const notesCalibrate = [{ note: "C" }, { note: "E" }, { note: "G" }]
 
-watch(score.notesSequence, ()=> {rewind()})
+function calibrar() {
+  calibrating.value = true
+  notePosition.value = 0
+  showModal.value = true
+}
+
+function finCalibracion() {
+  showModal.value = false
+  muestreado.value = true
+  calibrating.value = false
+    notePosition.value = -1
+    nextPosition()
+}
+
+function nextPosition() {
+  if (notePosition.value + 1 < notesSequence.value.length) {
+    notePosition.value++
+    if (!calibrating.value) {
+      highlightNextNote()
+      scrollToNextNote()
+    }
+  }
+  else {
+    if (calibrating.value) {
+      finCalibracion()
+    }
+  }
+}
+
+watch(notesSequence, () => { rewind() })
+
 
 function checkPlayedNote(note) {
   if (!nextNote.value) return
-  if (note == nextNote.value.note) {
-    hits.value++
-    addClassToNote('note-hit')
+  const matchNote = getNoteValueIgnoringSharp(note) == getNoteValueIgnoringSharp(nextNote.value.note)
+
+  if (!calibrating.value) {
+    if (matchNote) {
+      hits.value++
+      addClassToNote('note-hit')
+    }
+    else {
+      fails.value++
+      addClassToNote('note-fail')
+    }
   }
-  else {
-    fails.value++
-    addClassToNote('note-fail')
-  }
+  else if (!matchNote) return // mientras está calibrando no avanza a la siguiente nota hasta que la acierte
+
+
+  tuner.waitPeak()
   // next Note move
-  notePosition.value++
-  scrollToNextNote()
-  highlightNextNote()
+  nextPosition()
 }
 
 
 function scrollToNextNote() {
-  const element = document.getElementById('vf-'+nextNote.value.id)
+  if (!nextNote.value) return
+  const element = document.getElementById('vf-' + nextNote.value.id)
   if (element) {
     element.scrollIntoView({
       behavior: 'smooth',
@@ -316,13 +402,13 @@ function scrollToNextNote() {
 
 function highlightNextNote() {
   var element = document.querySelector('.next-note')
-  if(element) element.classList.remove('next-note')
+  if (element) element.classList.remove('next-note')
   addClassToNote('next-note')
 }
 
 function addClassToNote(cls) {
-  if(!nextNote.value) return
-  const element = document.getElementById('vf-'+nextNote.value.id)
+  if (!nextNote.value) return
+  const element = document.getElementById('vf-' + nextNote.value.id)
   element.classList.add(cls)
 }
 
@@ -332,10 +418,21 @@ function addClassToNote(cls) {
 
 
 <style>
+.next-note {
+  stroke: blue;
+  fill: blue
+}
 
-.next-note {stroke: blue; fill: blue}
-.note-hit {stroke: green; fill: green}
-.note-fail {stroke:red; fill: red}
+.note-hit {
+  stroke: green;
+  fill: green
+}
+
+.note-fail {
+  stroke: red;
+  fill: red
+}
+
 * {
   box-sizing: border-box;
 }

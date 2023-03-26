@@ -2375,6 +2375,11 @@ fetch-blob@^3.1.2, fetch-blob@^3.1.4:
     node-domexception "^1.0.0"
     web-streams-polyfill "^3.0.3"
 
+fft.js@^4.0.4:
+  version "4.0.4"
+  resolved "https://registry.yarnpkg.com/fft.js/-/fft.js-4.0.4.tgz#ffed83a397e58039141c804c1dbe1910dced8e6e"
+  integrity sha512-f9c00hphOgeQTlDyavwTtu6RiK8AIFjD6+jvXkNkpeQ7rirK3uFWVpalkoS4LAwbdX7mfZ8aoBfFVQX1Re/8aw==
+
 figures@^5.0.0:
   version "5.0.0"
   resolved "https://registry.yarnpkg.com/figures/-/figures-5.0.0.tgz#126cd055052dea699f8a54e8c9450e6ecfc44d5f"
@@ -3908,6 +3913,13 @@ pinia@>=2.0.31:
     "@vue/devtools-api" "^6.5.0"
     vue-demi "*"
 
+pitchy@^4.0.7:
+  version "4.0.7"
+  resolved "https://registry.yarnpkg.com/pitchy/-/pitchy-4.0.7.tgz#95b41e5911321530a44a0cf67739d397fb302bef"
+  integrity sha512-AEMDKxw+o8eeLK432cJniBJLgQ+KgGb0QFFHMA+3v2wAqeYesVyoPSJqaezNZXdJnN+7nK+i8qVR/aQp/NLxiA==
+  dependencies:
+    fft.js "^4.0.4"
+
 pkg-types@^1.0.1, pkg-types@^1.0.2:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/pkg-types/-/pkg-types-1.0.2.tgz#c233efc5210a781e160e0cafd60c0d0510a4b12e"
@@ -4915,11 +4927,6 @@ tsscmp@1.0.6:
   resolved "https://registry.yarnpkg.com/tsscmp/-/tsscmp-1.0.6.tgz#85b99583ac3589ec4bfef825b5000aa911d605eb"
   integrity sha512-LxhtAkPDTkVCMQjt2h6eBVY28KCjikZqZfMcC15YBeNjkgUpdCfBu5HoiOTDu86v6smE8yOjyEktJ8hlbANHQA==
 
-tunajs@^1.0.8:
-  version "1.0.15"
-  resolved "https://registry.yarnpkg.com/tunajs/-/tunajs-1.0.15.tgz#fe1be8fac86049ca2353d6e078d07dee069a5147"
-  integrity sha512-es0bgyTHP8ftyWEot7YqLlLH30yZqHUTT6K5TKFhVqIB1Y6Cuu8WvBunfTVQSmzrpuhz15PQjyen7uuwi4gjdw==
-
 type-fest@^0.21.3:
   version "0.21.3"
   resolved "https://registry.yarnpkg.com/type-fest/-/type-fest-0.21.3.tgz#d260a24b0198436e133fa26a524a6d65fa3b2e37"
@@ -5228,14 +5235,6 @@ wcwidth@^1.0.1:
   integrity sha512-XHPEwS0q6TaxcvG85+8EYkbiCux2XtWG2mkc47Ng2A77BQu9+DqIOJldST4HgPkuea7dvKSj5VgX3P1d4rW8Tg==
   dependencies:
     defaults "^1.0.3"
-
-web-audio-daw@^4.13.2:
-  version "4.13.2"
-  resolved "https://registry.yarnpkg.com/web-audio-daw/-/web-audio-daw-4.13.2.tgz#203adac9a7e54630fc96ade24aafe42fdf31baec"
-  integrity sha512-PdcqFXZemxlJtUT1/eROxcMZ6UB6Mu9g73DOORBcWbRdlISTvOObZToEYMf2M/lGyo+eOGqFPYtVsYmW3RrvcA==
-  dependencies:
-    lodash "^4.17.21"
-    tunajs "^1.0.8"
 
 web-streams-polyfill@^3.0.3:
   version "3.2.1"

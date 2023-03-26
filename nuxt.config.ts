@@ -10,6 +10,7 @@ export default defineNuxtConfig({
     'nuxt-icon'
   ],
 
+  
   app: {
     head: {
       script: [{ src: 'main.prod.js' }]

@@ -1,11 +1,11 @@
-import Wad from "web-audio-daw";
+// import Wad from "web-audio-daw";
 
 export const useRecorder = () => {
   var voice = null;
   var polywad = null;
 
   function init() {
-    voice = new Wad({ source: "mic" });
+  /*  voice = new Wad({ source: "mic" });
     polywad = new Wad.Poly({
       recorder: {
         options: { mimeType: "audio/webm" },
@@ -18,15 +18,15 @@ export const useRecorder = () => {
       },
     });
     polywad.add(voice);
-    voice.play();
+    voice.play();*/
   }
 
   function start() {
-    polywad.recorder.start();
+    // polywad.recorder.start();
   }
 
   function stop() {
-    polywad.recorder.stop();
+    // polywad.recorder.stop();
   }
 
   return { init, start, stop };
